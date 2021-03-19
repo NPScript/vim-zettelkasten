@@ -89,9 +89,7 @@ endfunction
 let g:project = expand('<sfile>')
 let g:project = strpart(g:project, 0, strridx(g:project, "/"))
 let g:project = strpart(g:project, 0, strridx(g:project, "/"))
-if isdirectory(g:project . "/build") == 0
-	call system("make -C" . g:project)
-endif
+call system("make -C" . g:project)
 let g:header = g:project . "/build/header"
 
 command ToggleZettelkasten call ToggleZettelkasten()

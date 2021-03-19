@@ -1,7 +1,5 @@
 SOURCES=$(wildcard tools/*.c)
-BIN=$(SOURCES:tools/%.c=%)
-DESTDIR=/usr/local
-DESTBIN=$(SOURCES:tools/%.c=$(DESTDIR)/bin/%)
+BIN=$(SOURCES:tools/%.c=build/%)
 
 all: $(BIN)
 
@@ -16,20 +14,12 @@ help:
 options:
 	@echo "OBJ			= $(SOURCES)"
 	@echo "BIN			= $(BIN)"
-	@echo "DESTDIR	= $(DESTDIR)"
-	@echo "DESTBIN	= $(DESTBIN)"
 
 build:
 	mkdir build
 
-%: tools/%.c build
-	gcc -O3 $< -o build/$@
+build/%: tools/%.c build
+	gcc -O3 $< -o $@
 
 clean:
 	rm -rf build
-
-install: all
-	cp build/* $(DESTDIR)/bin/
-
-uninstall:
-	rm $(DESTBIN)
