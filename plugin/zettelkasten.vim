@@ -21,6 +21,7 @@ endfunction
 function! Search(search)
 	call Clear()
 	call Header()
+	call Write("Search Result")
 	let name = ""
 	let search = a:search
 
@@ -32,28 +33,48 @@ function! Search(search)
 		let name = split(name, "/")[1]
 	endif
 
-	let output = system("rtree . .md | " . g:header . " " . search . " | grep ' " . name . "' | awk '{ print $1 }' | " . g:header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
+	let output = ""
+
+	if search == "[content]"
+		let output = system(g:vim_zettelkasten_rtree . " . .md | " . g:vim_zettelkasten_csearch . " '" . name . "' | " . g:vim_zettelkasten_header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
+	elseif
+		let output = system(g:vim_zettelkasten_rtree . ". .md | " . g:vim_zettelkasten_header . " " . search . " | grep ' " . name . "' | awk '{ print $1 }' | " . g:vim_zettelkasten_header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
+	endif
 
 	for i in split(output, '\n')
 		call Write("    " . i)
 	endfor
 endfunction
 
-function! OpenFile()
+function! GetCursorFilePath()
 	let l=getline(line('.'))
 	let bi=strridx(l, "(")
 	let ci=strridx(l, ")")
 	let l=strpart(l, bi + 1, ci - bi - 1)
-	let n=winnr()
-	silent execute 'wincmd l'
-	if winnr() == n
-		silent execute 'vertical new'
-	elseif &modified
-		silent execute 'new'
-	endif
-	silent execute 'n '. l
+	return l
 endfunction
 
+function! OpenFile()
+	let path = GetCursorFilePath()
+	if strlen(path)
+		let n=winnr()
+		silent execute 'wincmd l'
+		if winnr() == n
+			vnew
+		elseif &modified
+			new
+		endif
+		silent execute 'n ' . path
+	endif
+endfunction
+
+function! SplitFile()
+	let path = GetCursorFilePath()
+	if strlen(path)
+		vnew
+		silent execute 'n ' . path
+	endif
+endfunction
 
 function! MakeHighlight()
 	call matchadd("Comment", "^  Zettelkasten")
@@ -66,6 +87,7 @@ function! OpenBuffer()
 	setlocal nonumber
 	setlocal nowrap
 	setlocal buftype=nofile
+	setlocal splitright
 	vertical resize 50
 	file Zettelkasten
 	call MakeHighlight()
@@ -74,6 +96,7 @@ function! OpenBuffer()
 	map <silent> <buffer> /t :call Search("tag")<CR>
 	map <silent> <buffer> // :call Search("")<CR>
 	map <silent> <buffer> <Enter> :call OpenFile()<CR>
+	map <silent> <buffer> s :call SplitFile()<CR>
 endfunction
 
 function! ToggleZettelkasten()
@@ -83,13 +106,32 @@ function! ToggleZettelkasten()
 	else
 		bdelete "Zettelkasten"
 	endif
-			
 endfunction
 
-let g:project = expand('<sfile>')
-let g:project = strpart(g:project, 0, strridx(g:project, "/"))
-let g:project = strpart(g:project, 0, strridx(g:project, "/"))
-call system("make -C" . g:project)
-let g:header = g:project . "/build/header"
+let g:vim_zettelkasten_path = expand('<sfile>')
+let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
+let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
+call system("make -C" . g:vim_zettelkasten_path)
+let g:vim_zettelkasten_header = g:vim_zettelkasten_path . "/build/header"
+let g:vim_zettelkasten_csearch = g:vim_zettelkasten_path . "/build/csearch"
+let g:vim_zettelkasten_rtree = g:vim_zettelkasten_path . "/build/rtree"
 
-command ToggleZettelkasten call ToggleZettelkasten()
+command! ToggleZettelkasten call ToggleZettelkasten()
+
+function! LinkAction()
+	let name = synIDattr(synID(line('.'), col('.'), 1), 'name')
+
+	if name == "markdownLinkText"
+		normal f(
+		let line = strpart(getline(line('.')), col('.'))
+		let filepath = strpart(line, 0, strridx(line, ')'))
+		execute 'e! ' . filepath
+
+	else
+		" Create New Link
+	endif
+endfunction
+
+autocmd! FileType markdown omap <silent> <buffer> <Return> :call LinkAction()<CR>
+autocmd! FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
+
