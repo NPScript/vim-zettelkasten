@@ -18,8 +18,10 @@ options:
 build:
 	mkdir build
 
-build/%: tools/%.c build
+build/%: tools/%.c | build
 	gcc -O3 $< -o $@
 
 clean:
 	rm -rf build
+
+.PHONY: all
