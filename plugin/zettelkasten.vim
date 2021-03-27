@@ -1,4 +1,3 @@
-
 function! Clear()
 	setlocal modifiable
 	call deletebufline("Zettelkasten", 1, line("$"))
@@ -116,22 +115,32 @@ let g:vim_zettelkasten_header = g:vim_zettelkasten_path . "/build/header"
 let g:vim_zettelkasten_csearch = g:vim_zettelkasten_path . "/build/csearch"
 let g:vim_zettelkasten_rtree = g:vim_zettelkasten_path . "/build/rtree"
 
-command! ToggleZettelkasten call ToggleZettelkasten()
+command! VZKToggle call ToggleZettelkasten()
 
 function! LinkAction()
 	let name = synIDattr(synID(line('.'), col('.'), 1), 'name')
 
-	if name == "markdownLinkText"
+	if name == "markdownLinkText" || name == "markdownLinkTextDelimiter"
 		normal f(
 		let line = strpart(getline(line('.')), col('.'))
 		let filepath = strpart(line, 0, strridx(line, ')'))
 		execute 'e! ' . filepath
-
+	elseif name == "markdownUrl" || name == "markdownLinkDelimiter"
+		normal F(
+		let line = strpart(getline(line('.')), col('.'))
+		let filepath = strpart(line, 0, strridx(line, ')'))
+		execute 'e! ' . filepath
 	else
-		" Create New Link
+		if strlen(matchstr(getline(line('.'))[col('.') - 1], '\S'))
+			normal viwdi[]
+			normal hp
+			normal f]li()
+			startinsert
+		endif
 	endif
 endfunction
 
-autocmd! FileType markdown omap <silent> <buffer> <Return> :call LinkAction()<CR>
-autocmd! FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
+command! VZKFollowLink call LinkAction()
+autocmd FileType markdown map <buffer> <Return> :VZKFollowLink<CR>
+autocmd FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
 
