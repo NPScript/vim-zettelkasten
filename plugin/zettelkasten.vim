@@ -1,3 +1,26 @@
+let g:vim_zettelkasten_path = expand('<sfile>')
+let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
+let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
+call system("make -C" . g:vim_zettelkasten_path)
+let g:vim_zettelkasten_header = g:vim_zettelkasten_path . "/build/header"
+let g:vim_zettelkasten_csearch = g:vim_zettelkasten_path . "/build/csearch"
+let g:vim_zettelkasten_rtree = g:vim_zettelkasten_path . "/build/rtree"
+let g:vim_zettelkasten_history = []
+let g:vim_zettelkasten_history_position = 0
+
+command! VZKFollowLink call LinkAction()
+command! VZKGoBackInHistory call GoBackInHistory()
+command! VZKGoForwardInHistory call GoForwardInHistory()
+
+autocmd FileType markdown map <buffer> <Return> :VZKFollowLink<CR>
+autocmd FileType markdown setlocal autowrite
+autocmd FileType markdown map <buffer> <BS> :VZKGoBackInHistory<CR>
+autocmd FileType markdown map <buffer> <TAB> :VZKGoForwardInHistory<CR>
+autocmd FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
+autocmd FileType markdown call AddFileToHistory(expand("%"))
+
+command! VZKToggle call ToggleZettelkasten()
+
 function! Clear()
 	setlocal modifiable
 	call deletebufline("Zettelkasten", 1, line("$"))
@@ -107,15 +130,6 @@ function! ToggleZettelkasten()
 	endif
 endfunction
 
-let g:vim_zettelkasten_path = expand('<sfile>')
-let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
-let g:vim_zettelkasten_path = strpart(g:vim_zettelkasten_path, 0, strridx(g:vim_zettelkasten_path, "/"))
-call system("make -C" . g:vim_zettelkasten_path)
-let g:vim_zettelkasten_header = g:vim_zettelkasten_path . "/build/header"
-let g:vim_zettelkasten_csearch = g:vim_zettelkasten_path . "/build/csearch"
-let g:vim_zettelkasten_rtree = g:vim_zettelkasten_path . "/build/rtree"
-
-command! VZKToggle call ToggleZettelkasten()
 
 function! LinkAction()
 	let name = synIDattr(synID(line('.'), col('.'), 1), 'name')
@@ -140,7 +154,27 @@ function! LinkAction()
 	endif
 endfunction
 
-command! VZKFollowLink call LinkAction()
-autocmd FileType markdown map <buffer> <Return> :VZKFollowLink<CR>
-autocmd FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
+function! GoBackInHistory()
+	if g:vim_zettelkasten_history_position > 1
+		let g:vim_zettelkasten_history_position -= 1
+	endif
 
+	execute 'e! ' . g:vim_zettelkasten_history[g:vim_zettelkasten_history_position - 1]
+endfunction
+
+function! GoForwardInHistory()
+	if g:vim_zettelkasten_history_position < len(g:vim_zettelkasten_history)
+		let g:vim_zettelkasten_history_position += 1
+	endif
+	execute 'e! ' . g:vim_zettelkasten_history[g:vim_zettelkasten_history_position - 1]
+endfunction
+
+function! AddFileToHistory(path)
+	if g:vim_zettelkasten_history_position == 0
+		call add(g:vim_zettelkasten_history, a:path)
+		let g:vim_zettelkasten_history_position += 1
+	elseif g:vim_zettelkasten_history[g:vim_zettelkasten_history_position - 1] != a:path
+		call add(g:vim_zettelkasten_history, a:path)
+		let g:vim_zettelkasten_history_position += 1
+	endif
+endfunction
