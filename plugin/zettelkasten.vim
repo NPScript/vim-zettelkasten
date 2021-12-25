@@ -15,11 +15,17 @@ command! VZKGoForwardInHistory call GoForwardInHistory()
 autocmd FileType markdown map <buffer> <Return> :VZKFollowLink<CR>
 autocmd FileType markdown setlocal autowrite
 autocmd FileType markdown map <buffer> <BS> :VZKGoBackInHistory<CR>
-autocmd FileType markdown map <buffer> <TAB> :VZKGoForwardInHistory<CR>
+autocmd FileType markdown map <buffer> zb :VZKGoForwardInHistory<CR>
 autocmd FileType markdown syn region markdownLink matchgroup=markdownLinkDelimiter start="(" end=")" contains=markdownUrl keepend contained conceal
 autocmd FileType markdown call AddFileToHistory(expand("%"))
 
 command! VZKToggle call ToggleZettelkasten()
+command! JumpToVZK exe bufwinnr("Zettelkasten") . "wincmd w"
+
+function! Close()
+	JumpToVZK
+	hide
+endfunction
 
 function! Clear()
 	setlocal modifiable
@@ -59,8 +65,8 @@ function! Search(search)
 
 	if search == "[content]"
 		let output = system(g:vim_zettelkasten_rtree . " . .md | " . g:vim_zettelkasten_csearch . " '" . name . "' | " . g:vim_zettelkasten_header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
-	elseif
-		let output = system(g:vim_zettelkasten_rtree . ". .md | " . g:vim_zettelkasten_header . " " . search . " | grep ' " . name . "' | awk '{ print $1 }' | " . g:vim_zettelkasten_header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
+	else
+		let output = system(g:vim_zettelkasten_rtree . " . .md | " . g:vim_zettelkasten_header . " " . search . " | grep ' " . name . "' | awk '{ print $1 }' | " . g:vim_zettelkasten_header . " title | awk '{ first=$1; $1=\"\"; print $0, \"(\" first \")\" }'")
 	endif
 
 	for i in split(output, '\n')
@@ -110,8 +116,9 @@ function! OpenBuffer()
 	setlocal nowrap
 	setlocal buftype=nofile
 	setlocal splitright
+	setlocal nowrite
 	vertical resize 50
-	file Zettelkasten
+	e Zettelkasten
 	call MakeHighlight()
 	call Header()
 	map <silent> <buffer> q ZQ
@@ -126,7 +133,7 @@ function! ToggleZettelkasten()
 	if n < 0
 		call OpenBuffer()
 	else
-		bdelete "Zettelkasten"
+		call Close()
 	endif
 endfunction
 
